@@ -13,6 +13,7 @@ import hashlib
 import shutil
 import struct
 import sys
+import zlib
 from pathlib import Path
 
 if getattr(sys, "frozen", False):
@@ -28,6 +29,13 @@ PROFILES_PATH = ROOT / "DATA" / "Savegame" / "Profiles"
 PROFILES_BAK = ROOT / "DATA" / "Savegame" / "Profiles.bak"
 PROFILES_RES_OFF = 0x104
 DEFAULT_RES = "1920x1080"
+
+DEFAULT_RES_PAK = ROOT / "DATA" / "Interface" / "DEFAULT.RES"
+DEFAULT_RES_PAK_BAK = ROOT / "DATA" / "Interface" / "DEFAULT.RES.bak"
+HUD_FOLIAGE_ENTRIES = (
+    (316186, 160, 110, 1, 9702),
+    (325912, 384, 110, 1, 23848),
+)
 
 EXPECTED_ORIG_SHA256 = "b0963242470d96cdd8021e2cb81ccbc5e26b4fb2cb122febdec50ad30774f08e"
 
@@ -196,6 +204,52 @@ def apply_resolution(width: int, height: int) -> None:
     print(f"Set resolution in {PROFILES_PATH.relative_to(ROOT)} -> {width}x{height}")
 
 
+def _mirror_tile_rgb565(raw: bytes, w: int, h: int, target_w: int) -> bytes:
+    out = bytearray()
+    row_bytes = w * 2
+    for y in range(h):
+        row = raw[y * row_bytes : (y + 1) * row_bytes]
+        rev = b"".join(row[i : i + 2] for i in range(row_bytes - 2, -1, -2))
+        built = bytearray()
+        flip = False
+        while len(built) < target_w * 2:
+            src = rev if flip else row
+            need = target_w * 2 - len(built)
+            built += src[:need]
+            flip = not flip
+        out += built
+    return bytes(out)
+
+
+def build_extended_default_res(res_bak: bytes, width: int) -> bytes:
+    target_w = max(384, width - 640)
+    out = bytearray()
+    last_end = 0
+    for off, exp_w, exp_h, exp_flags, exp_cs in HUD_FOLIAGE_ENTRIES:
+        w, h, flags, cs = struct.unpack_from("<HHII", res_bak, off)
+        if (w, h, flags, cs) != (exp_w, exp_h, exp_flags, exp_cs):
+            raise RuntimeError(f"Unexpected DEFAULT.RES entry at 0x{off:x}: {(w, h, flags, cs)}")
+        out += res_bak[last_end:off]
+        raw = zlib.decompress(res_bak[off + 12 : off + 12 + cs])
+        new_raw = _mirror_tile_rgb565(raw, w, h, target_w)
+        comp = zlib.compress(new_raw, level=9)
+        out += struct.pack("<HHII", target_w, h, flags, len(comp)) + comp
+        last_end = off + 12 + cs
+    out += res_bak[last_end:]
+    return bytes(out)
+
+
+def apply_hud_foliage(width: int) -> None:
+    if width <= 1024 or not DEFAULT_RES_PAK.exists():
+        return
+    if not DEFAULT_RES_PAK_BAK.exists():
+        shutil.copy2(DEFAULT_RES_PAK, DEFAULT_RES_PAK_BAK)
+        print(f"Backed up {DEFAULT_RES_PAK.name} -> {DEFAULT_RES_PAK_BAK.name}")
+    res_bak = DEFAULT_RES_PAK_BAK.read_bytes()
+    DEFAULT_RES_PAK.write_bytes(build_extended_default_res(res_bak, width))
+    print(f"Extended bottom-bar HUD foliage in {DEFAULT_RES_PAK.relative_to(ROOT)} -> {max(384, width - 640)}x110")
+
+
 def revert_patch() -> None:
     if not BACKUP_EXE.exists():
         raise FileNotFoundError(f"Backup not found: {BACKUP_EXE}")
@@ -204,6 +258,9 @@ def revert_patch() -> None:
     if PROFILES_BAK.exists():
         shutil.copy2(PROFILES_BAK, PROFILES_PATH)
         print(f"Restored {PROFILES_PATH.name} from {PROFILES_BAK.name}")
+    if DEFAULT_RES_PAK_BAK.exists():
+        shutil.copy2(DEFAULT_RES_PAK_BAK, DEFAULT_RES_PAK)
+        print(f"Restored {DEFAULT_RES_PAK.name} from {DEFAULT_RES_PAK_BAK.name}")
 
 
 def interactive_menu() -> None:
@@ -223,10 +280,12 @@ def interactive_menu() -> None:
             if res_in.lower() != "skip":
                 w, h = parse_resolution(res_in)
                 apply_resolution(w, h)
+                apply_hud_foliage(w)
         else:
             apply_patch(DEFAULT_PAN_SPEED, sysmem=True, linear_pan=False)
             w, h = parse_resolution(DEFAULT_RES)
             apply_resolution(w, h)
+            apply_hud_foliage(w)
     except Exception as exc:
         print(f"\nError: {exc}")
     input("\nPress Enter to exit...")
@@ -252,6 +311,7 @@ def main() -> None:
         if not args.no_res:
             w, h = parse_resolution(args.res)
             apply_resolution(w, h)
+            apply_hud_foliage(w)
 
 
 if __name__ == "__main__":

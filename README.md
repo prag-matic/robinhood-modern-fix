@@ -3,7 +3,7 @@
 Performance, frame-pacing, and camera-panning patch for **Robin Hood: The Legend of Sherwood (GOG 1.1.0.0)**.
 
 ## What It Fixes
-- **Widescreen Resolution Fix (`1920x1080` default)**: Patches `DATA\Savegame\Profiles` (`0x104`/`0x108` float32) to run at `1920x1080` or any custom `--res WxH` resolution (automatically backs up `Profiles.bak`).
+- **Widescreen Resolution Fix (`1920x1080` default)**: Patches `DATA\Savegame\Profiles` (`0x104`/`0x108` float32) to run at `1920x1080` or any custom `--res WxH` resolution (automatically backs up `Profiles.bak`), and seamlessly extends the bottom-bar HUD foliage in `DATA\Interface\DEFAULT.RES` to span the full widescreen width without gaps.
 - **60 FPS Rendering, Cursor & Camera / Native 25 Hz Simulation**: Unlocks the render/input/camera loop to 60 FPS (`Sleep(0)` wait cave) while keeping game logic and animations locked at 25 Hz (`40 ms`) so gameplay speed is unchanged.
 - **DirectDraw `DDSCAPS_SYSTEMMEMORY` Fix**: Moves offscreen DirectDraw surfaces into system RAM (`0x0840`) to eliminate GPU↔CPU `Lock()` readback stalls during software alpha-blending and zoomed-out `Stretching16` blits (fixes 15–17 FPS zoomed-out drops).
 - **Smooth Camera Panning**: Removes stepped `+1.0` pan jitter and sets a smooth exponential pan curve (`2.5 -> 10.8 px/frame` with 60 FPS coasting), configurable via `--pan-speed` or `--linear-pan`.
