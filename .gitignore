@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+Game.exe
+Game.exe.bak
+ddraw.dll
