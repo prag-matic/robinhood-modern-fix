@@ -15,11 +15,10 @@ Performance, frame-pacing, and camera-panning patch for **Robin Hood: The Legend
 - The patcher checks this hash before modifying anything and automatically creates `Game.exe.bak`.
 
 ## Installation
-1. Download `RobinHood_ModernFix.exe` and `DDrawCompat.ini` from the **Releases** page.
-2. Download `ddraw.dll` from [narzoul/DDrawCompat](https://github.com/narzoul/DDrawCompat/releases) (tested with `v0.7.2`).
-3. In your game folder, back up the original `ddraw.dll` (e.g. rename to `ddraw.dll.gog.bak`).
-4. Copy `RobinHood_ModernFix.exe`, `DDrawCompat.ini`, and DDrawCompat's `ddraw.dll` into the game folder next to `Game.exe`.
-5. Run `RobinHood_ModernFix.exe` and choose **[1] Apply patch**.
+1. Download `RobinHood_ModernFix.zip` from the **Releases** page (includes `RobinHood_ModernFix.exe`, `DDrawCompat.ini`, and `ddraw.dll` from [narzoul/DDrawCompat](https://github.com/narzoul/DDrawCompat) v0.7.2).
+2. In your game folder, back up the original `ddraw.dll` (e.g. rename to `ddraw.dll.gog.bak`).
+3. Extract `RobinHood_ModernFix.zip` into the game folder next to `Game.exe` (overwrite `ddraw.dll` when prompted).
+4. Run `RobinHood_ModernFix.exe` and choose **[1] Apply full fix**.
 
 ## CLI Options & Revert
 ```powershell

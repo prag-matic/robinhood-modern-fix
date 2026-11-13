@@ -24,10 +24,25 @@ jobs:
       - name: Build RobinHood_ModernFix.exe
         run: pyinstaller --onefile --name RobinHood_ModernFix robinhood_modern_fix.py
 
+      - name: Download DDrawCompat v0.7.2
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/narzoul/DDrawCompat/releases/download/v0.7.2/DDrawCompat-v0.7.2.zip" -OutFile "DDrawCompat.zip"
+          Expand-Archive -Path "DDrawCompat.zip" -DestinationPath "ddrawcompat_tmp" -Force
+
+      - name: Package RobinHood_ModernFix.zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "bundle" -Force | Out-Null
+          Copy-Item "dist/RobinHood_ModernFix.exe" "bundle/"
+          Copy-Item "ddrawcompat_tmp/ddraw.dll" "bundle/"
+          Copy-Item "DDrawCompat.ini" "bundle/"
+          Copy-Item "README.md" "bundle/"
+          Compress-Archive -Path "bundle/*" -DestinationPath "RobinHood_ModernFix.zip" -Force
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            RobinHood_ModernFix.zip
             dist/RobinHood_ModernFix.exe
-            DDrawCompat.ini
-            README.md
