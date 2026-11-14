@@ -8,7 +8,8 @@ Performance, frame-pacing, and camera-panning patch for **Robin Hood: The Legend
 - **DirectDraw `DDSCAPS_SYSTEMMEMORY` Fix**: Moves offscreen DirectDraw surfaces into system RAM (`0x0840`) to eliminate GPU↔CPU `Lock()` readback stalls during software alpha-blending and zoomed-out `Stretching16` blits (fixes 15–17 FPS zoomed-out drops).
 - **Smooth Camera Panning**: Removes stepped `+1.0` pan jitter and sets a smooth exponential pan curve (`2.5 -> 10.8 px/frame` with 60 FPS coasting), configurable via `--pan-speed` or `--linear-pan`.
 - **Large Address Aware (LAA)**: Sets `IMAGE_FILE_LARGE_ADDRESS_AWARE` (`0x0020`) in `Game.exe` for 4 GB virtual memory on 64-bit Windows.
-- **DDrawCompat 60 Hz Preset (`DDrawCompat.ini`)**: Pairs with DDrawCompat v0.7.2 for tear-free 60 FPS VSync on 60 Hz and 120 Hz+ monitors.
+- **DDrawCompat 60 Hz Preset (`DDrawCompat.ini`)**: Pairs with DDrawCompat v0.7.2 using `FullscreenMode = borderless` for tear-free 60 FPS VSync without monitor "No Signal" / mode-switch issues on 120 Hz+ and modern displays.
+- **Widescreen Zoom & Black-Texture Hotfix**: Clips out-of-bounds DirectDraw `Blt` source rectangles (`DDERR_INVALIDRECT`) so ground textures render cleanly when zoomed out on smaller maps (`Sherwood`, `Croisement01/02/03`), and starts narrow maps (`< screen_w`) at `2.0x` zoom while keeping `0.5x` disabled at `1080p`.
 
 ## Supported Game Version
 - **GOG 1.1.0.0** (`Game.exe` original SHA256: `b0963242470d96cdd8021e2cb81ccbc5e26b4fb2cb122febdec50ad30774f08e`).

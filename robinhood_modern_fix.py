@@ -119,6 +119,55 @@ SURF_VIDMEM_OFF = 0x1E4FFC
 ORIG_SURF_VIDMEM = bytes.fromhex("40 40 00 00")    # 0x00004040
 PATCH_SURF_SYSMEM = bytes.fromhex("40 08 00 00")   # 0x00000840
 
+# 6) Widescreen zoom & black-texture fix:
+#    - Clip Blit src_rect to [0, 0, src_w, src_h] and scale dst_rect proportionally (prevents DDERR_INVALIDRECT
+#      black/missing ground textures on smaller maps like Sherwood and Croisement01/02/03).
+#    - Start maps narrower than screen_w (Croisement01/02/03 at 1080p) at 2.0x zoom.
+BLT_HOOK_OFF = 0x1E67AF
+ORIG_BLT_BYTES = bytes.fromhex(
+    "8b4c2410"
+    "6a00"
+    "51"
+    "8b8c2484000000"
+    "8b4310"
+    "51"
+    "8b4c2428"
+    "8b10"
+    "8b4910"
+    "51"
+    "8b4c2424"
+    "51"
+    "50"
+    "ff5214"
+)
+PATCH_BLT_BYTES = bytes.fromhex("e8f6060900eb1e") + b"\x90" * (len(ORIG_BLT_BYTES) - 7)
+
+BLT_CAVE_OFF = 0x276EAA  # 306 bytes (VA 0x00676eaa)
+BLT_CAVE_BYTES = bytes.fromhex(
+    "5589e583ec2856578bb5840000008b7d1c85f60f84f8000000"
+    "578d7df06a0459f3a55e8d7de085f6751031c0abab668b4314"
+    "ab668b4316abeb056a0459f3a58d75f08d7de08b55240fb74a"
+    "140fb75216833e007c14837e04007c0e394e087f0939560c0f"
+    "8ea80000008b46082b060f8eb60000008945d88b47082b0789"
+    "45dc8b0685c07d10f7d8f76ddcf77dd80107c706000000008b"
+    "460839c87e0e29c8f76ddcf77dd8294708894e088b063b4608"
+    "7d798b073b47087d728b45240fb748168b460c2b46047e6389"
+    "45d88b470c2b47048945dc8b460485c07d12f7d8f76ddcf77d"
+    "d8014704c74604000000008b460c39c87e0e29c8f76ddcf77d"
+    "d829470c894e0c8b46043b460c7d218b47043b470c7d196a00"
+    "ff7518568b4d248b491051578b4310508b10ff5214eb0231c0"
+    "5f5e89ec5dc3"
+)
+
+INIT_ZOOM_HOOK_OFF = 0x0C2F36
+ORIG_INIT_ZOOM_BYTES = bytes.fromhex("8b96304700008986c4480000")
+PATCH_INIT_ZOOM_BYTES = bytes.fromhex("8986c4480000e89f401b0090")
+
+INIT_ZOOM_CAVE_OFF = 0x276FE0  # 32 bytes (VA 0x00676fe0)
+INIT_ZOOM_CAVE_BYTES = bytes.fromhex(
+    "8b96304700003b96284700007311c6869848000002c7865c47000000000040c3"
+)
+
 
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
@@ -154,6 +203,10 @@ def apply_patch(pan_speed: float = DEFAULT_PAN_SPEED, sysmem: bool = True, linea
     assert data[COAST_Y_OFF : COAST_Y_OFF + len(ORIG_COAST_Y)] == ORIG_COAST_Y, "Coast Y mismatch"
     assert data[SURF_NONLOCAL_OFF : SURF_NONLOCAL_OFF + 4] == ORIG_SURF_NONLOCAL, "Surf nonlocal mismatch"
     assert data[SURF_VIDMEM_OFF : SURF_VIDMEM_OFF + 4] == ORIG_SURF_VIDMEM, "Surf vidmem mismatch"
+    assert data[BLT_HOOK_OFF : BLT_HOOK_OFF + len(ORIG_BLT_BYTES)] == ORIG_BLT_BYTES, "Blt hook mismatch"
+    assert data[INIT_ZOOM_HOOK_OFF : INIT_ZOOM_HOOK_OFF + len(ORIG_INIT_ZOOM_BYTES)] == ORIG_INIT_ZOOM_BYTES, "Init zoom hook mismatch"
+    assert all(b == 0 for b in data[BLT_CAVE_OFF : BLT_CAVE_OFF + len(BLT_CAVE_BYTES)]), "Blt cave not empty"
+    assert all(b == 0 for b in data[INIT_ZOOM_CAVE_OFF : INIT_ZOOM_CAVE_OFF + len(INIT_ZOOM_CAVE_BYTES)]), "Init zoom cave not empty"
 
     data[SIM_CALL_OFF : SIM_CALL_OFF + 5] = PATCH_SIM_CALL
     data[WAIT_LOOP_OFF : WAIT_LOOP_OFF + len(PATCH_WAIT_LOOP)] = PATCH_WAIT_LOOP
@@ -168,6 +221,10 @@ def apply_patch(pan_speed: float = DEFAULT_PAN_SPEED, sysmem: bool = True, linea
     if sysmem:
         data[SURF_NONLOCAL_OFF : SURF_NONLOCAL_OFF + 4] = PATCH_SURF_SYSMEM
         data[SURF_VIDMEM_OFF : SURF_VIDMEM_OFF + 4] = PATCH_SURF_SYSMEM
+    data[BLT_CAVE_OFF : BLT_CAVE_OFF + len(BLT_CAVE_BYTES)] = BLT_CAVE_BYTES
+    data[BLT_HOOK_OFF : BLT_HOOK_OFF + len(PATCH_BLT_BYTES)] = PATCH_BLT_BYTES
+    data[INIT_ZOOM_CAVE_OFF : INIT_ZOOM_CAVE_OFF + len(INIT_ZOOM_CAVE_BYTES)] = INIT_ZOOM_CAVE_BYTES
+    data[INIT_ZOOM_HOOK_OFF : INIT_ZOOM_HOOK_OFF + len(PATCH_INIT_ZOOM_BYTES)] = PATCH_INIT_ZOOM_BYTES
 
     pe_off = struct.unpack_from("<I", data, 0x3C)[0]
     chars_off = pe_off + 0x16
