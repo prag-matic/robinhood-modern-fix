@@ -22,7 +22,7 @@ jobs:
         run: pip install pyinstaller
 
       - name: Build RobinHood_ModernFix.exe
-        run: pyinstaller --onefile --name RobinHood_ModernFix robinhood_modern_fix.py
+        run: pyinstaller --onefile --add-data "assets/banner.png;assets" --name RobinHood_ModernFix robinhood_modern_fix.py
 
       - name: Download DDrawCompat v0.7.2
         shell: pwsh
