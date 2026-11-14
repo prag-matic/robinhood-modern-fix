@@ -45,4 +45,3 @@ jobs:
         with:
           files: |
             RobinHood_ModernFix.zip
-            dist/RobinHood_ModernFix.exe
